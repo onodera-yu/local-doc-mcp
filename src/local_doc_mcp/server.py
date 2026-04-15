@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import base64
+from io import BytesIO
 from pathlib import Path
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
+from PIL import Image as PILImage
 
 from local_doc_mcp.indexer import search
 from local_doc_mcp.parser import parse_file
+
+
+def _compress_image(image_b64: str, max_edge: int = 768, quality: int = 60) -> bytes:
+    """Base64 PNG画像をリサイズ・JPEG圧縮してバイト列を返す。"""
+    raw = base64.b64decode(image_b64)
+    img = PILImage.open(BytesIO(raw))
+    img.thumbnail((max_edge, max_edge))
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=quality)
+    return buf.getvalue()
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "lancedb_data"
 
@@ -27,50 +42,66 @@ def search_docs(query: str, top_k: int = 5) -> list[dict]:
 
 
 @mcp.tool()
-def analyze_attachment(file_path: str, include_images: bool = False) -> dict:
+def analyze_attachment(file_path: str, include_images: bool = False) -> list:
     """添付ファイルを解析し構造情報を返す。
 
     PDF / Excel / 画像 / テキストファイルに対応。
     ファイルの構造やテキスト内容を返却する。
     PDFの場合、テキストと画像がドキュメント内の配置順で返却される。
 
+    include_images=Trueの場合、画像はMCPのImageContent型で返却され、
+    LLMがビジョン入力として直接解釈できる。
+
     Args:
         file_path: 解析するファイルのパス
-        include_images: Trueの場合、画像のbase64データを含める。
+        include_images: Trueの場合、画像をMCP Image型で含める。
                         Falseの場合、画像の存在情報のみ返却する（デフォルト）。
     """
     path = Path(file_path)
     if not path.exists():
-        return {"error": f"ファイルが見つかりません: {file_path}"}
+        return [{"error": f"ファイルが見つかりません: {file_path}"}]
 
     try:
         documents = parse_file(path)
-        sections = []
-        for doc in documents:
-            section: dict = {"metadata": doc["metadata"]}
-            if doc.get("type") == "image":
-                section["type"] = "image"
-                if include_images:
-                    section["image_base64"] = doc["content"]
-                    section["mime_type"] = "image/png"
-                else:
-                    section["description"] = "（画像: include_images=True で取得可能）"
-                if doc.get("ocr_text"):
-                    section["ocr_text"] = doc["ocr_text"][:2000]
-            else:
-                section["type"] = "text"
-                # 既存形式との互換: content があれば使う、なければ text
-                text = doc.get("content") or doc.get("text", "")
-                section["text"] = text[:2000]
-            sections.append(section)
-
-        return {
+        results: list = []
+        # ファイル情報ヘッダー
+        results.append({
             "file_type": path.suffix.lstrip("."),
             "file_name": path.name,
-            "sections": sections,
-        }
+            "total_sections": len(documents),
+        })
+
+        for doc in documents:
+            metadata = doc["metadata"]
+            if doc.get("type") == "image":
+                if include_images:
+                    # MCP Image型で返却 → LLMがビジョン入力として解釈
+                    compressed = _compress_image(doc["content"])
+                    results.append(Image(data=compressed, format="jpeg"))
+                else:
+                    results.append({
+                        "type": "image",
+                        "description": "（画像: include_images=True で取得可能）",
+                        "metadata": metadata,
+                    })
+                # OCRテキストがあればテキストとして追加
+                if doc.get("ocr_text"):
+                    results.append({
+                        "type": "image_ocr",
+                        "ocr_text": doc["ocr_text"][:2000],
+                        "metadata": metadata,
+                    })
+            else:
+                text = doc.get("content") or doc.get("text", "")
+                results.append({
+                    "type": "text",
+                    "text": text[:2000],
+                    "metadata": metadata,
+                })
+
+        return results
     except ValueError as e:
-        return {"error": str(e)}
+        return [{"error": str(e)}]
 
 
 def main():

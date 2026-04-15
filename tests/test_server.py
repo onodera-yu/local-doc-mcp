@@ -81,10 +81,12 @@ class TestMcpServer:
                 result = await session.call_tool(
                     "analyze_attachment", {"file_path": txt_path}
                 )
-                data = json.loads(result.content[0].text)
-                assert data["file_type"] == "txt"
-                assert data["file_name"] == "sample.txt"
-                assert len(data["sections"]) >= 1
+                # 戻り値はリスト: [ヘッダー, セクション1, ...]
+                items = [json.loads(c.text) for c in result.content if hasattr(c, "text")]
+                header = items[0]
+                assert header["file_type"] == "txt"
+                assert header["file_name"] == "sample.txt"
+                assert len(items) >= 2  # ヘッダー + 1セクション以上
 
     async def test_analyze_attachment_not_found(self, server_params):
         async with stdio_client(server_params) as (read, write):
