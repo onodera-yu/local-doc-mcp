@@ -88,7 +88,8 @@
 ```
 ドキュメントファイル
   ↓ parser（形式別）
-セクションリスト [{ text, metadata }]
+セクションリスト [{ type, content, metadata }]
+  ※ PDFの場合 type は "text" または "image" で、配置順序を保持
   ↓ chunker
 チャンクリスト [{ text, metadata }]
   ↓ embedder（fastembed）
@@ -101,7 +102,7 @@ LanceDB に保存
 
 | 形式 | テキスト抽出 | 画像処理 | メタ情報 |
 |---|---|---|---|
-| PDF | pypdfium2 でページ単位抽出 | ページ内の埋め込み画像を検出しOCR | source, page |
+| PDF | pypdfium2 でページ単位抽出 | ページ内の埋め込み画像をBase64で返却 + OCR。テキストと画像は座標ベースでドキュメント内の配置順序を保持 | source, page |
 | Excel | openpyxl でシート構造を文章化 | xl/media/ 内の画像をOCR | source, sheet |
 | 画像 | - | rapidocr でOCR | source |
 | テキスト | そのまま読み込み | - | source |
@@ -139,6 +140,7 @@ LLM に提供
 
 - インデックスに登録されていないファイルもその場で解析可能
 - ファイル形式を自動判定し、対応するパーサーで構造情報を返却
+- PDFの場合、テキストと埋め込み画像を座標ベースでドキュメント内の配置順序を保持して返却する。画像はBase64エンコードしたPNGとして返却され、LLMがマルチモーダルに解釈可能
 - LLM はこの結果をもとにファイルの内容を理解・照合する
 
 ---

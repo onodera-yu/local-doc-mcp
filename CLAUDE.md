@@ -8,7 +8,7 @@
 |---|---|---|
 | MCPサーバー | mcp[cli] (FastMCP) | 公式SDK |
 | Embedding | fastembed | ONNX基盤、multilingual-e5-small |
-| PDF解析 | pypdfium2 | Chromium PDFiumバインディング |
+| PDF解析 | pypdfium2 | Chromium PDFiumバインディング。テキストと画像を座標ベースで配置順に抽出 |
 | Excel解析 | openpyxl | pandas併用 |
 | 画像OCR | rapidocr-onnxruntime | pip完結、OS依存なし |
 | ベクトルDB | lancedb | Apache Arrow基盤、ファイルベース |

@@ -32,6 +32,7 @@ def analyze_attachment(file_path: str) -> dict:
 
     PDF / Excel / 画像 / テキストファイルに対応。
     ファイルの構造やテキスト内容を返却する。
+    PDFの場合、テキストと画像がドキュメント内の配置順で返却される。
 
     Args:
         file_path: 解析するファイルのパス
@@ -42,16 +43,26 @@ def analyze_attachment(file_path: str) -> dict:
 
     try:
         documents = parse_file(path)
+        sections = []
+        for doc in documents:
+            section: dict = {"metadata": doc["metadata"]}
+            if doc.get("type") == "image":
+                section["type"] = "image"
+                section["image_base64"] = doc["content"]
+                section["mime_type"] = "image/png"
+                if doc.get("ocr_text"):
+                    section["ocr_text"] = doc["ocr_text"][:2000]
+            else:
+                section["type"] = "text"
+                # 既存形式との互換: content があれば使う、なければ text
+                text = doc.get("content") or doc.get("text", "")
+                section["text"] = text[:2000]
+            sections.append(section)
+
         return {
             "file_type": path.suffix.lstrip("."),
             "file_name": path.name,
-            "sections": [
-                {
-                    "text": doc["text"][:2000],
-                    "metadata": doc["metadata"],
-                }
-                for doc in documents
-            ],
+            "sections": sections,
         }
     except ValueError as e:
         return {"error": str(e)}

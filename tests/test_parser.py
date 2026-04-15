@@ -29,7 +29,28 @@ class TestPdfParser:
         assert len(results) >= 1
         assert results[0]["metadata"]["source"] == "sample.pdf"
         assert results[0]["metadata"]["page"] == 1
-        assert "Test PDF" in results[0]["text"]
+        assert results[0]["type"] == "text"
+        assert "Test PDF" in results[0]["content"]
+
+    def test_parse_pdf_with_image_order(self, fixtures_dir: Path):
+        """テキスト→画像→テキストの位置順で返却されることを検証する。"""
+        results = parse_pdf(fixtures_dir / "sample_with_image.pdf")
+        assert len(results) == 3
+
+        # 1番目: 画像より上のテキスト
+        assert results[0]["type"] == "text"
+        assert "Above Image Text" in results[0]["content"]
+        assert results[0]["metadata"]["page"] == 1
+
+        # 2番目: 画像
+        assert results[1]["type"] == "image"
+        assert len(results[1]["content"]) > 0  # Base64データが存在
+        assert results[1]["metadata"]["page"] == 1
+
+        # 3番目: 画像より下のテキスト
+        assert results[2]["type"] == "text"
+        assert "Below Image Text" in results[2]["content"]
+        assert results[2]["metadata"]["page"] == 1
 
 
 class TestExcelParser:

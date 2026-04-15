@@ -116,6 +116,7 @@ Kiro の MCP設定画面から、上記と同様のコマンドを登録して�
 ### `analyze_attachment(file_path: str)`
 
 ファイルを解析し、構造情報を返します。インデックスに登録されていないファイルも解析可能です。
+PDFの場合、テキストと埋め込み画像がドキュメント内の配置順序を保持して返却されます。
 
 **パラメータ:**
 
@@ -123,7 +124,7 @@ Kiro の MCP設定画面から、上記と同様のコマンドを登録して�
 |---|---|---|
 | `file_path` | `str` | 解析するファイルのパス |
 
-**戻り値の例:**
+**戻り値の例（Excel等テキストのみ）:**
 
 ```json
 {
@@ -131,8 +132,37 @@ Kiro の MCP設定画面から、上記と同様のコマンドを登録して�
   "file_name": "monitoring_settings.xlsx",
   "sections": [
     {
+      "type": "text",
       "text": "シート: 監視設定\nカラム: 監視ID, 監視対象, 閾値, 通知先\n...",
       "metadata": { "source": "monitoring_settings.xlsx", "sheet": "監視設定" }
+    }
+  ]
+}
+```
+
+**戻り値の例（PDF・テキストと画像の混在）:**
+
+```json
+{
+  "file_type": "pdf",
+  "file_name": "report.pdf",
+  "sections": [
+    {
+      "type": "text",
+      "text": "売上レポート 2024年度...",
+      "metadata": { "source": "report.pdf", "page": 1 }
+    },
+    {
+      "type": "image",
+      "image_base64": "iVBORw0KGgo...",
+      "mime_type": "image/png",
+      "ocr_text": "売上推移グラフ 1月 2月...",
+      "metadata": { "source": "report.pdf", "page": 1 }
+    },
+    {
+      "type": "text",
+      "text": "上記グラフの通り、Q3に売上が急伸...",
+      "metadata": { "source": "report.pdf", "page": 1 }
     }
   ]
 }
@@ -142,7 +172,7 @@ Kiro の MCP設定画面から、上記と同様のコマンドを登録して�
 
 | 形式 | 拡張子 | 処理内容 |
 |---|---|---|
-| PDF | `.pdf` | テキスト抽出 + 埋め込み画像のOCR |
+| PDF | `.pdf` | テキスト抽出 + 埋め込み画像のBase64返却・OCR（配置順序を保持） |
 | Excel | `.xlsx`, `.xls` | シート構造の文章化 + 埋め込み画像のOCR |
 | 画像 | `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.tif` | OCRによるテキスト抽出 |
 | テキスト | `.txt`, `.md`, `.csv`, `.log` | そのまま読み込み |

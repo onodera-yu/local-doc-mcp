@@ -17,8 +17,13 @@ def get_ocr() -> RapidOCR:
 
 def ocr_from_image_bytes(data: bytes) -> str:
     """画像バイナリからOCRでテキストを抽出する。"""
+    import cv2
+
     arr = np.frombuffer(data, dtype=np.uint8)
-    result, _ = get_ocr()(arr)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        return ""
+    result, _ = get_ocr()(img)
     if not result:
         return ""
     return "\n".join(line[1] for line in result)
