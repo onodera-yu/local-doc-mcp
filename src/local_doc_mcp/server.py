@@ -27,7 +27,7 @@ def search_docs(query: str, top_k: int = 5) -> list[dict]:
 
 
 @mcp.tool()
-def analyze_attachment(file_path: str) -> dict:
+def analyze_attachment(file_path: str, include_images: bool = False) -> dict:
     """添付ファイルを解析し構造情報を返す。
 
     PDF / Excel / 画像 / テキストファイルに対応。
@@ -36,6 +36,8 @@ def analyze_attachment(file_path: str) -> dict:
 
     Args:
         file_path: 解析するファイルのパス
+        include_images: Trueの場合、画像のbase64データを含める。
+                        Falseの場合、画像の存在情報のみ返却する（デフォルト）。
     """
     path = Path(file_path)
     if not path.exists():
@@ -48,8 +50,11 @@ def analyze_attachment(file_path: str) -> dict:
             section: dict = {"metadata": doc["metadata"]}
             if doc.get("type") == "image":
                 section["type"] = "image"
-                section["image_base64"] = doc["content"]
-                section["mime_type"] = "image/png"
+                if include_images:
+                    section["image_base64"] = doc["content"]
+                    section["mime_type"] = "image/png"
+                else:
+                    section["description"] = "（画像: include_images=True で取得可能）"
                 if doc.get("ocr_text"):
                     section["ocr_text"] = doc["ocr_text"][:2000]
             else:

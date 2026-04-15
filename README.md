@@ -113,16 +113,17 @@ Kiro の MCP設定画面から、上記と同様のコマンドを登録して�
 ]
 ```
 
-### `analyze_attachment(file_path: str)`
+### `analyze_attachment(file_path: str, include_images: bool = False)`
 
 ファイルを解析し、構造情報を返します。インデックスに登録されていないファイルも解析可能です。
 PDFの場合、テキストと埋め込み画像がドキュメント内の配置順序を保持して返却されます。
 
 **パラメータ:**
 
-| 名前 | 型 | 説明 |
-|---|---|---|
-| `file_path` | `str` | 解析するファイルのパス |
+| 名前 | 型 | デフォルト | 説明 |
+|---|---|---|---|
+| `file_path` | `str` | (必須) | 解析するファイルのパス |
+| `include_images` | `bool` | `False` | `True` の場合、画像のBase64データを含める。`False` の場合、画像の存在情報のみ返却する |
 
 **戻り値の例（Excel等テキストのみ）:**
 
@@ -140,7 +141,34 @@ PDFの場合、テキストと埋め込み画像がドキュメント内の配�
 }
 ```
 
-**戻り値の例（PDF・テキストと画像の混在）:**
+**戻り値の例（PDF・テキストと画像の混在、`include_images=False`）:**
+
+```json
+{
+  "file_type": "pdf",
+  "file_name": "report.pdf",
+  "sections": [
+    {
+      "type": "text",
+      "text": "売上レポート 2024年度...",
+      "metadata": { "source": "report.pdf", "page": 1 }
+    },
+    {
+      "type": "image",
+      "description": "（画像: include_images=True で取得可能）",
+      "ocr_text": "売上推移グラフ 1月 2月...",
+      "metadata": { "source": "report.pdf", "page": 1 }
+    },
+    {
+      "type": "text",
+      "text": "上記グラフの通り、Q3に売上が急伸...",
+      "metadata": { "source": "report.pdf", "page": 1 }
+    }
+  ]
+}
+```
+
+**戻り値の例（PDF・`include_images=True`）:**
 
 ```json
 {
