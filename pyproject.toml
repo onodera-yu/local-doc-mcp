@@ -1,0 +1,38 @@
+[project]
+name = "local-doc-mcp"
+version = "0.1.0"
+description = "ローカルドキュメントをLLMから検索・参照できるMCPサーバー"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]",
+    "fastembed",
+    "pypdfium2",
+    "openpyxl",
+    "pandas",
+    "rapidocr-onnxruntime",
+    "lancedb",
+    "pyarrow",
+    "Pillow",
+    "numpy",
+]
+
+[project.scripts]
+local-doc-mcp = "local_doc_mcp.server:main"
+build-index = "local_doc_mcp.scripts.build_index:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/local_doc_mcp"]
